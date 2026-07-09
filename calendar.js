@@ -1,4 +1,4 @@
-import { db, collection, query, onSnapshot, addDoc, deleteDoc, where, doc } from './firebase-config.js';
+import { db, collection, query, onSnapshot, addDoc, deleteDoc, where, doc, getDocs } from './firebase-config.js';
 import { currentUserProfile } from './auth.js';
 
 const calendarGrid = document.getElementById('calendar-grid');
@@ -13,11 +13,64 @@ let unsubscribeVisits = null;
 // Hónap nevek magyarul
 const monthNames = ["Január", "Február", "Március", "Április", "Május", "Június", "Július", "Augusztus", "Szeptember", "Október", "November", "December"];
 
+let allUsers = [];
+let highlightedUid = null;
+
 // Naptár inicializálása, ha a profil betöltött
 window.addEventListener('profileReady', () => {
     renderCalendar();
     subscribeToVisits();
+    loadLegend();
 });
+
+async function loadLegend() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        allUsers = [];
+        querySnapshot.forEach((doc) => {
+            allUsers.push(doc.data());
+        });
+        renderLegend();
+    } catch (e) {
+        console.error("Hiba a felhasználók betöltésekor", e);
+    }
+}
+
+function renderLegend() {
+    const legendContainer = document.getElementById('user-legend');
+    if (!legendContainer) return;
+    legendContainer.innerHTML = '';
+    
+    allUsers.forEach(user => {
+        const item = document.createElement('div');
+        item.classList.add('legend-item');
+        if (highlightedUid === user.uid) {
+            item.classList.add('active');
+        }
+        
+        const colorDot = document.createElement('div');
+        colorDot.classList.add('legend-color');
+        colorDot.style.backgroundColor = user.color;
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = user.nickname;
+        
+        item.appendChild(colorDot);
+        item.appendChild(nameSpan);
+        
+        item.addEventListener('click', () => {
+            if (highlightedUid === user.uid) {
+                highlightedUid = null; // Kikapcsolás
+            } else {
+                highlightedUid = user.uid; // Bekapcsolás
+            }
+            renderLegend();
+            updateMarkers(); // Frissítjük a markereket a kiemeléshez
+        });
+        
+        legendContainer.appendChild(item);
+    });
+}
 
 btnPrevMonth.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() - 1);
@@ -65,6 +118,14 @@ function renderCalendar() {
         const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         dayDiv.dataset.date = dateString;
         
+        const currentDayDate = new Date(year, month, day);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        if (currentDayDate < today) {
+            dayDiv.classList.add('past');
+        }
+
         const dayNumber = document.createElement('span');
         dayNumber.classList.add('day-number');
         dayNumber.textContent = day;
@@ -127,6 +188,12 @@ function updateMarkers() {
             marker.classList.add('day-marker');
             marker.style.backgroundColor = visit.color;
             marker.title = visit.nickname;
+            
+            // Ha van kiemelt felhasználó és nem ő az, akkor halványítjuk
+            if (highlightedUid && visit.uid !== highlightedUid) {
+                marker.classList.add('dimmed');
+            }
+            
             container.appendChild(marker);
         }
     });
