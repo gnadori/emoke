@@ -1,4 +1,4 @@
-import { db, collection, query, onSnapshot, addDoc, deleteDoc, where, getDocs, doc } from './firebase-config.js';
+import { db, collection, query, onSnapshot, addDoc, deleteDoc, where, doc } from './firebase-config.js';
 import { currentUserProfile } from './auth.js';
 
 const calendarGrid = document.getElementById('calendar-grid');
