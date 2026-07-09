@@ -1,4 +1,4 @@
-import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc } from './firebase-config.js';
+import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, collection, getDocs } from './firebase-config.js';
 
 // DOM elemek
 const loginScreen = document.getElementById('login-screen');
@@ -102,7 +102,8 @@ onAuthStateChanged(auth, async (user) => {
                 showScreen('app-screen');
                 window.dispatchEvent(new Event('profileReady'));
             } else {
-                // Nincs profilja, mutassuk a profil beállítás képernyőt
+                // Nincs profilja, letiltjuk a használt színeket és mutassuk a profil beállítás képernyőt
+                await disableUsedColors();
                 showScreen('profile-setup-screen');
             }
         } catch (error) {
@@ -114,3 +115,32 @@ onAuthStateChanged(auth, async (user) => {
         showScreen('login-screen');
     }
 });
+
+async function disableUsedColors() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const usedColors = [];
+        querySnapshot.forEach((doc) => {
+            usedColors.push(doc.data().color);
+        });
+
+        let firstAvailableColor = null;
+        colorOptions.forEach(option => {
+            if (usedColors.includes(option.dataset.color)) {
+                option.classList.add('disabled');
+                option.style.opacity = '0.2';
+                option.style.pointerEvents = 'none';
+            } else {
+                if (!firstAvailableColor) firstAvailableColor = option;
+            }
+        });
+
+        if (firstAvailableColor) {
+            colorOptions.forEach(opt => opt.classList.remove('selected'));
+            firstAvailableColor.classList.add('selected');
+            selectedColor = firstAvailableColor.dataset.color;
+        }
+    } catch (e) {
+        console.error("Hiba a használt színek lekérdezésekor: ", e);
+    }
+}
