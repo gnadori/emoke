@@ -1,4 +1,4 @@
-import { db, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from './firebase-config.js';
+import { db, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, deleteDoc, updateDoc } from './firebase-config.js';
 import { currentUserProfile } from './auth.js';
 
 const forumPostsContainer = document.getElementById('forum-posts');
@@ -95,20 +95,93 @@ function renderPosts() {
             timeString = 'Épp most...';
         }
         
+        let actionsHTML = '';
+        if (currentUserProfile && post.uid === currentUserProfile.uid) {
+            actionsHTML = `
+                <div class="post-item-actions">
+                    <button class="btn btn-small btn-edit" data-id="${post.id}">Szerkesztés</button>
+                    <button class="btn btn-small btn-delete" data-id="${post.id}">Törlés</button>
+                </div>
+            `;
+        }
+        
         postDiv.innerHTML = `
             <div class="post-header">
                 <span class="post-author">${post.nickname}</span>
                 <span class="post-time">${timeString}</span>
             </div>
-            <div class="post-body">
+            <div class="post-body" id="post-body-${post.id}">
                 ${escapeHTML(post.text)}
             </div>
             <span class="post-tag-badge tag-${post.tag}">${post.tag.charAt(0).toUpperCase() + post.tag.slice(1)}</span>
+            ${actionsHTML}
         `;
         
         forumPostsContainer.appendChild(postDiv);
     });
 }
+
+// Eseménykezelő a szerkesztés és törlés gombokhoz
+forumPostsContainer.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('btn-delete')) {
+        const postId = e.target.dataset.id;
+        if (confirm('Biztosan törölni szeretnéd ezt a bejegyzést?')) {
+            try {
+                await deleteDoc(doc(db, "posts", postId));
+            } catch (error) {
+                console.error("Hiba a törléskor:", error);
+                alert("Nem sikerült törölni a bejegyzést.");
+            }
+        }
+    }
+    
+    if (e.target.classList.contains('btn-edit')) {
+        const postId = e.target.dataset.id;
+        const post = allPosts.find(p => p.id === postId);
+        if (!post) return;
+        
+        const postBodyContainer = document.getElementById(`post-body-${postId}`);
+        if (!postBodyContainer) return;
+        
+        postBodyContainer.innerHTML = `
+            <div class="edit-mode-form">
+                <textarea id="edit-textarea-${postId}">${post.text}</textarea>
+                <div class="edit-mode-actions">
+                    <button class="btn btn-small btn-primary btn-save-edit" data-id="${postId}">Mentés</button>
+                    <button class="btn btn-small btn-cancel-edit" data-id="${postId}">Mégse</button>
+                </div>
+            </div>
+        `;
+        
+        const actionsContainer = e.target.closest('.post-item-actions');
+        if (actionsContainer) {
+            actionsContainer.style.display = 'none';
+        }
+    }
+    
+    if (e.target.classList.contains('btn-cancel-edit')) {
+        renderPosts();
+    }
+    
+    if (e.target.classList.contains('btn-save-edit')) {
+        const postId = e.target.dataset.id;
+        const newText = document.getElementById(`edit-textarea-${postId}`).value.trim();
+        
+        if (!newText) {
+            alert('A bejegyzés nem lehet üres!');
+            return;
+        }
+        
+        try {
+            await updateDoc(doc(db, "posts", postId), {
+                text: newText
+            });
+        } catch (error) {
+            console.error("Hiba a szerkesztéskor:", error);
+            alert("Nem sikerült módosítani a bejegyzést.");
+        }
+    }
+});
 
 // Egyszerű XSS védelem
 function escapeHTML(str) {

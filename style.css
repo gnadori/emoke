@@ -355,6 +355,49 @@ body {
 .post-tag-badge.tag-orvos { background-color: var(--tag-doctor); }
 .post-tag-badge.tag-egyéb { background-color: var(--tag-other); }
 
+/* Bejegyzés műveletek (Szerkesztés / Törlés) */
+.post-item-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.post-item-actions .btn-small {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+}
+
+.btn-delete {
+    background-color: #FEE2E2;
+    color: #EF4444;
+}
+
+.btn-delete:hover {
+    background-color: #FECACA;
+}
+
+.edit-mode-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.edit-mode-form textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.edit-mode-actions {
+    display: flex;
+    gap: 8px;
+}
+
 /* Reszponzivitás */
 @media (max-width: 768px) {
     .app-content {
